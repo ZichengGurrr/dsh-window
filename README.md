@@ -47,6 +47,7 @@ dsh plugin --profile web add dsh-window
 1. 下载 `DeepSeek-Harness-Window-v*-win-x64.zip` 并解压（4 个文件）
 2. 前提：Windows 10/11、Node.js 装在默认位置 `%LOCALAPPDATA%\Programs\nodejs`、`npm install -g @deepseek-ai/dsh`
 3. 双击 `DeepSeek Harness Window.exe`
+4. 想一键安装到系统（开始菜单 + 桌面快捷方式 + 控制面板可卸载）：运行 `DeepSeek Harness Window.exe --install`，卸载用 `--uninstall`
 
 ## 两种形态
 
@@ -65,7 +66,7 @@ dsh plugin --profile web add dsh-window
 | 体积 | 256KB（精简）/ 180MB（便携） | 约 4.5MB | 安装包 |
 | 需要 Node | 精简版需要；**便携版不需要** | 需要 | 不需要 |
 | 技术栈 | C# + WebView2（系统自带 csc 即可编译） | Tauri v2 + React | Electron |
-| 托盘 / 任务完成通知 | 计划中 | 有 | 有 |
+| 托盘 / 任务完成通知 | 托盘有（`closeToTray`）；通知计划中 | 有 | 有 |
 
 ## 原理
 
@@ -81,7 +82,11 @@ DeepSeek Harness 的图形界面本质是一个本地网页（默认 `http://127
   "port": 3080,
   "waitTimeoutMs": 30000,
   "killServerOnClose": true,
-  "permissionMode": "danger-full-access"
+  "permissionMode": "danger-full-access",
+  "closeToTray": true,
+  "checkUpdates": true,
+  "updateRepo": "ZichengGurrr/dsh-window",
+  "logFile": true
 }
 ```
 
@@ -91,6 +96,10 @@ DeepSeek Harness 的图形界面本质是一个本地网页（默认 `http://127
 | `waitTimeoutMs` | `30000` | 等待服务就绪的超时 |
 | `killServerOnClose` | `true` | 服务由本程序启动时，关窗是否一并停止 |
 | `permissionMode` | `danger-full-access` | 传给服务的 DSH 权限模式（也可在 Web UI 里改） |
+| `closeToTray` | `false` | 点关闭按钮最小化到托盘（托盘菜单：显示主窗口 / 退出） |
+| `checkUpdates` | `true` | 启动后检查 GitHub Release 新版本，有新版时页面右下角提示 |
+| `updateRepo` | `ZichengGurrr/dsh-window` | 更新检查的仓库 |
+| `logFile` | `false` | 写日志到 `%LOCALAPPDATA%\DeepSeekHarnessWindow\launcher.log` |
 
 ## 命令行参数
 
@@ -99,6 +108,8 @@ DeepSeek Harness 的图形界面本质是一个本地网页（默认 `http://127
 | （无） | 确保服务在线，然后打开窗口 |
 | `--check` | 只检查运行环境，不启动任何东西 |
 | `--no-window` | 只确保服务在线，不打开窗口 |
+| `--install` | 一键安装：拷贝到 `%LOCALAPPDATA%\Programs\dsh-window`，创建桌面/开始菜单快捷方式和卸载项 |
+| `--uninstall` | 卸载：移除快捷方式、注册表卸载项与安装目录 |
 
 ## 从源码构建
 
@@ -135,9 +146,11 @@ exe 未做代码签名，首次运行会被拦：点「更多信息 → 仍要�
 ## Roadmap
 
 - [x] 作为 DSH 插件分发（`dsh plugin add dsh-window`，含 `desktop_launch` 工具与自动安装/升级）
-- [ ] 托盘常驻与最小化到托盘
+- [x] 托盘常驻与最小化到托盘（`closeToTray`，点关闭按钮隐藏到托盘）
+- [x] 自动检查新版本并在页面内提示（`checkUpdates`）
+- [x] 一键安装/卸载（`--install` / `--uninstall`，开始菜单 + 桌面快捷方式 + 控制面板卸载项）
 - [ ] 任务完成系统通知（会话 idle 时弹 Toast，可一键唤回窗口）
-- [ ] 一键安装器（Inno Setup / winget 包）
+- [ ] Inno Setup / winget 安装包
 - [ ] 代码签名（消除 SmartScreen 警告）
 
 ## 相关链接
@@ -194,6 +207,7 @@ The plugin auto-installs the app from GitHub Releases and creates the desktop sh
 1. Download and unzip `DeepSeek-Harness-Window-v*-win-x64.zip` (4 files)
 2. Prerequisites: Windows 10/11, Node.js at `%LOCALAPPDATA%\Programs\nodejs`, `npm install -g @deepseek-ai/dsh`
 3. Double-click `DeepSeek Harness Window.exe`
+4. To install system-wide (start menu + desktop shortcut + control-panel uninstaller): run `DeepSeek Harness Window.exe --install`; remove with `--uninstall`
 
 ## Builds
 
@@ -218,7 +232,11 @@ Drop a `dsh-window.config.json` next to the exe (all keys optional):
   "port": 3080,
   "waitTimeoutMs": 30000,
   "killServerOnClose": true,
-  "permissionMode": "danger-full-access"
+  "permissionMode": "danger-full-access",
+  "closeToTray": true,
+  "checkUpdates": true,
+  "updateRepo": "ZichengGurrr/dsh-window",
+  "logFile": true
 }
 ```
 
@@ -228,6 +246,10 @@ Drop a `dsh-window.config.json` next to the exe (all keys optional):
 | `waitTimeoutMs` | `30000` | Service readiness timeout |
 | `killServerOnClose` | `true` | Stop the service on window close when this app started it |
 | `permissionMode` | `danger-full-access` | DSH permission mode passed to the service (changeable in the Web UI) |
+| `closeToTray` | `false` | Minimize to tray on close (tray menu: show window / quit) |
+| `checkUpdates` | `true` | Check GitHub Releases on startup and show an in-page banner when a new version exists |
+| `updateRepo` | `ZichengGurrr/dsh-window` | Repository used for the update check |
+| `logFile` | `false` | Write logs to `%LOCALAPPDATA%\DeepSeekHarnessWindow\launcher.log` |
 
 ## Command-line arguments
 
@@ -236,6 +258,8 @@ Drop a `dsh-window.config.json` next to the exe (all keys optional):
 | (none) | Ensure the service is online, then open the window |
 | `--check` | Only check the runtime environment, start nothing |
 | `--no-window` | Only ensure the service is online, open no window |
+| `--install` | One-click install: copies to `%LOCALAPPDATA%\Programs\dsh-window`, creates desktop/start-menu shortcuts and an uninstall entry |
+| `--uninstall` | Uninstall: removes shortcuts, the registry entry, and the install directory |
 
 ## Building from source
 
@@ -272,9 +296,11 @@ The exe is not code-signed yet, so the first run is blocked: click "More info �
 ## Roadmap
 
 - [x] DSH plugin distribution (`dsh plugin add dsh-window`, `desktop_launch` tool, auto-install/upgrade)
-- [ ] Tray residency and minimize-to-tray
+- [x] Tray residency and minimize-to-tray (`closeToTray`, X button hides to tray)
+- [x] Automatic update check with an in-page banner (`checkUpdates`)
+- [x] One-click install/uninstall (`--install` / `--uninstall`, start-menu + desktop shortcuts, control-panel entry)
 - [ ] Task-done system notification (toast when the session goes idle, one click to restore the window)
-- [ ] One-click installer (Inno Setup / winget package)
+- [ ] Inno Setup / winget package
 - [ ] Code signing (removes the SmartScreen warning)
 
 ## Links

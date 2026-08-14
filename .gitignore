@@ -1,5 +1,6 @@
 .build/
 dist/
+.test/
 *.zip
 *.nupkg
 dist-portable/

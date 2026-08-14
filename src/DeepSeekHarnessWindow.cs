@@ -18,8 +18,8 @@ using Microsoft.Web.WebView2.WinForms;
 [assembly: AssemblyDescription("DeepSeek Harness standalone window (WebView2)")]
 [assembly: AssemblyCompany("Community project, not affiliated with DeepSeek")]
 [assembly: AssemblyProduct("DeepSeek Harness Window")]
-[assembly: AssemblyVersion("1.1.0.0")]
-[assembly: AssemblyFileVersion("1.1.0.0")]
+[assembly: AssemblyVersion("1.2.0.0")]
+[assembly: AssemblyFileVersion("1.2.0.0")]
 
 internal static class Program
 {
@@ -42,21 +42,38 @@ internal static class Program
     private static Process spawnedServer;
     private static Mutex singleInstance;
 
+    internal static readonly string LogPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "DeepSeekHarnessWindow", "launcher.log");
+
     [STAThread]
     private static int Main(string[] args)
     {
+        // GitHub API requires TLS 1.2+; the .NET Framework default is lower.
+        ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
         try
         {
             bool checkOnly = HasFlag(args, "--check");
             bool noWindow = HasFlag(args, "--no-window") || HasFlag(args, "--no-open");
+            bool install = HasFlag(args, "--install");
+            bool uninstall = HasFlag(args, "--uninstall");
 
             string appDir = AppDomain.CurrentDomain.BaseDirectory;
             string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+
+            // Installer mode runs before any runtime resolution so it also
+            // works on machines without Node/DSH installed.
+            if (install)
+                return RunInstall(appDir) ? 0 : 1;
+            if (uninstall)
+                return RunUninstall() ? 0 : 1;
 
             paths = ResolvePaths(appDir, localAppData);
             config = LoadConfig(Path.Combine(appDir, "dsh-window.config.json"));
             appUrl = "http://" + config.Host + ":" + config.Port.ToString(CultureInfo.InvariantCulture) + "/";
             patchPath = Path.Combine(localAppData, "DeepSeekHarnessLauncher", "directory-picker.patch.yml");
+
+            Log("start, url=" + appUrl + ", portable=" + paths.NodeExe.StartsWith(appDir, StringComparison.OrdinalIgnoreCase));
 
             if (checkOnly)
                 return 0;
@@ -79,13 +96,29 @@ internal static class Program
 
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new MainForm(spawnedServer, appUrl, serverReady, config.KillServerOnClose));
+            Application.Run(new MainForm(spawnedServer, appUrl, serverReady, config.KillServerOnClose, config.CloseToTray));
             return 0;
         }
         catch (Exception error)
         {
             MessageBox.Show(error.Message, AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
             return 1;
+        }
+    }
+
+    internal static void Log(string message)
+    {
+        if (config == null || !config.LogFile)
+            return;
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(LogPath));
+            File.AppendAllText(LogPath,
+                DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " " + message + Environment.NewLine,
+                Encoding.UTF8);
+        }
+        catch
+        {
         }
     }
 
@@ -97,6 +130,66 @@ internal static class Program
         if (spawnedServer == null || spawnedServer.HasExited)
             spawnedServer = StartHarness();
         return WaitFor(appUrl, config.WaitTimeoutMs);
+    }
+
+    internal sealed class UpdateInfo
+    {
+        public string LatestVersion;
+        public string ReleaseUrl;
+    }
+
+    /// <summary>Queries GitHub for the latest release of the community repo.</summary>
+    internal static UpdateInfo CheckForUpdates()
+    {
+        try
+        {
+            string url = "https://api.github.com/repos/" + config.UpdateRepo + "/releases/latest";
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+            request.Method = "GET";
+            request.Timeout = 8000;
+            request.ReadWriteTimeout = 8000;
+            request.UserAgent = "DeepSeek-Harness-Window";
+            using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+            using (StreamReader reader = new StreamReader(response.GetResponseStream(), Encoding.UTF8))
+            {
+                JavaScriptSerializer serializer = new JavaScriptSerializer();
+                Dictionary<string, object> release =
+                    serializer.Deserialize<Dictionary<string, object>>(reader.ReadToEnd());
+                if (release == null || !release.ContainsKey("tag_name"))
+                    return null;
+                string tag = Convert.ToString(release["tag_name"]);
+                Version latest = ParseVersion(tag);
+                Version current = Assembly.GetExecutingAssembly().GetName().Version;
+                if (latest != null && latest > current)
+                {
+                    return new UpdateInfo
+                    {
+                        LatestVersion = tag,
+                        ReleaseUrl = release.ContainsKey("html_url") ? Convert.ToString(release["html_url"]) : ""
+                    };
+                }
+            }
+        }
+        catch (Exception error)
+        {
+            Log("update check failed: " + error.Message);
+        }
+        return null;
+    }
+
+    private static Version ParseVersion(string tag)
+    {
+        if (string.IsNullOrEmpty(tag))
+            return null;
+        string value = tag.StartsWith("v", StringComparison.OrdinalIgnoreCase) ? tag.Substring(1) : tag;
+        try
+        {
+            return new Version(value);
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static bool HasFlag(string[] args, string flag)
@@ -145,6 +238,10 @@ internal static class Program
         public int WaitTimeoutMs = 30000;
         public bool KillServerOnClose = true;
         public string PermissionMode = "danger-full-access";
+        public bool CheckUpdates = true;
+        public string UpdateRepo = "ZichengGurrr/dsh-window";
+        public bool CloseToTray = false;
+        public bool LogFile = false;
     }
 
     private static LauncherConfig LoadConfig(string path)
@@ -165,6 +262,11 @@ internal static class Program
             if (map.ContainsKey("killServerOnClose")) cfg.KillServerOnClose = Convert.ToBoolean(map["killServerOnClose"]);
             if (map.ContainsKey("permissionMode") && map["permissionMode"] is string)
                 cfg.PermissionMode = (string)map["permissionMode"];
+            if (map.ContainsKey("checkUpdates")) cfg.CheckUpdates = Convert.ToBoolean(map["checkUpdates"]);
+            if (map.ContainsKey("updateRepo") && map["updateRepo"] is string)
+                cfg.UpdateRepo = (string)map["updateRepo"];
+            if (map.ContainsKey("closeToTray")) cfg.CloseToTray = Convert.ToBoolean(map["closeToTray"]);
+            if (map.ContainsKey("logFile")) cfg.LogFile = Convert.ToBoolean(map["logFile"]);
         }
         catch
         {
@@ -231,20 +333,214 @@ internal static class Program
     [DllImport("user32.dll")]
     private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
+    [DllImport("user32.dll")]
+    private static extern bool EnumWindows(EnumWindowsProc callback, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+
+    private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
     private static void FocusExistingInstance()
     {
         Process current = Process.GetCurrentProcess();
+        uint targetPid = 0;
         foreach (Process process in Process.GetProcessesByName(current.ProcessName))
         {
             if (process.Id == current.Id)
                 continue;
-            IntPtr handle = process.MainWindowHandle;
-            if (handle != IntPtr.Zero)
+            targetPid = (uint)process.Id;
+            break;
+        }
+        if (targetPid == 0)
+            return;
+        // MainWindowHandle is zero for a tray-hidden window, so enumerate
+        // top-level windows of the owning PID instead (hidden ones included).
+        EnumWindows(delegate(IntPtr hWnd, IntPtr lParam)
+        {
+            uint pid;
+            GetWindowThreadProcessId(hWnd, out pid);
+            if (pid == targetPid)
             {
-                ShowWindow(handle, 9); // SW_RESTORE
-                SetForegroundWindow(handle);
-                return;
+                ShowWindow(hWnd, 9); // SW_RESTORE
+                SetForegroundWindow(hWnd);
+                return false;
             }
+            return true;
+        }, IntPtr.Zero);
+    }
+
+    // ---- one-click installer (--install / --uninstall) ----
+
+    private const string ExeName = "DeepSeek Harness Window.exe";
+    private const string ShortcutName = "DeepSeek Harness Window.lnk";
+    private const string UninstallKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\DeepSeekHarnessWindow";
+
+    private static readonly string[] ShipFiles = new string[]
+    {
+        ExeName,
+        "Microsoft.Web.WebView2.Core.dll",
+        "Microsoft.Web.WebView2.WinForms.dll",
+        "WebView2Loader.dll"
+    };
+
+    private static string InstallDir
+    {
+        get
+        {
+            return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Programs", "dsh-window");
+        }
+    }
+
+    private static string ShortcutPath(Environment.SpecialFolder folder)
+    {
+        return Path.Combine(Environment.GetFolderPath(folder), ShortcutName);
+    }
+
+    /// <summary>Copies the app into %LOCALAPPDATA%\Programs\dsh-window and
+    /// creates desktop / start-menu shortcuts plus an uninstall registry entry.</summary>
+    private static bool RunInstall(string appDir)
+    {
+        try
+        {
+            string target = InstallDir;
+            Directory.CreateDirectory(target);
+            foreach (string file in ShipFiles)
+            {
+                string source = Path.Combine(appDir, file);
+                if (File.Exists(source))
+                    File.Copy(source, Path.Combine(target, file), true);
+            }
+            string exePath = Path.Combine(target, ExeName);
+            if (!File.Exists(exePath))
+                throw new InvalidOperationException("未找到应用文件，请把 4 个程序文件与安装器放在同一目录。");
+
+            Version version = Assembly.GetExecutingAssembly().GetName().Version;
+            // Plugin-compatible marker: same tag format as GitHub Releases.
+            File.WriteAllText(Path.Combine(target, "installed-version.txt"), "v" + version.ToString(3));
+
+            CreateShortcut(ShortcutPath(Environment.SpecialFolder.DesktopDirectory), exePath, target);
+            CreateShortcut(ShortcutPath(Environment.SpecialFolder.Programs), exePath, target);
+
+            using (Microsoft.Win32.RegistryKey key =
+                Microsoft.Win32.Registry.CurrentUser.CreateSubKey(UninstallKeyPath))
+            {
+                key.SetValue("DisplayName", "DeepSeek Harness Window");
+                key.SetValue("DisplayVersion", version.ToString(3));
+                key.SetValue("Publisher", "Community project (not affiliated with DeepSeek)");
+                key.SetValue("InstallLocation", target);
+                key.SetValue("DisplayIcon", exePath + ",0");
+                key.SetValue("UninstallString", Quote(exePath) + " --uninstall");
+                key.SetValue("NoModify", 1);
+                key.SetValue("NoRepair", 1);
+            }
+
+            WriteInstallLog("installed to " + target + " (v" + version.ToString(3) + ")");
+            MessageBox.Show(
+                "安装完成。\n\n位置：" + target + "\n\n已在桌面和开始菜单创建快捷方式。",
+                AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return true;
+        }
+        catch (Exception error)
+        {
+            MessageBox.Show("安装失败：" + error.Message, AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return false;
+        }
+    }
+
+    /// <summary>Removes shortcuts and the uninstall entry, then deletes the
+    /// install directory when nothing else remains in it.</summary>
+    private static bool RunUninstall()
+    {
+        try
+        {
+            TryDelete(ShortcutPath(Environment.SpecialFolder.DesktopDirectory));
+            TryDelete(ShortcutPath(Environment.SpecialFolder.Programs));
+            try
+            {
+                Microsoft.Win32.Registry.CurrentUser.DeleteSubKeyTree(UninstallKeyPath, false);
+            }
+            catch
+            {
+            }
+
+            string target = InstallDir;
+            bool removedDir = false;
+            try
+            {
+                if (Directory.Exists(target))
+                {
+                    foreach (string file in ShipFiles)
+                        TryDelete(Path.Combine(target, file));
+                    TryDelete(Path.Combine(target, "installed-version.txt"));
+                    if (Directory.GetFileSystemEntries(target).Length == 0)
+                    {
+                        Directory.Delete(target);
+                        removedDir = true;
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            WriteInstallLog("uninstalled, dir removed=" + removedDir);
+            MessageBox.Show(
+                "已卸载。快捷方式和注册表项已移除。" +
+                (removedDir ? "\n安装目录已删除。" : "\n安装目录仍有其它文件，未删除。"),
+                AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return true;
+        }
+        catch (Exception error)
+        {
+            MessageBox.Show("卸载失败：" + error.Message, AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return false;
+        }
+    }
+
+    /// <summary>Creates a .lnk via WScript.Shell COM (reflection, no interop assembly).</summary>
+    private static void CreateShortcut(string lnkPath, string targetPath, string workDir)
+    {
+        Type shellType = Type.GetTypeFromProgID("WScript.Shell");
+        object shell = Activator.CreateInstance(shellType);
+        object lnk = shellType.InvokeMember("CreateShortcut",
+            System.Reflection.BindingFlags.InvokeMethod, null, shell, new object[] { lnkPath });
+        Type lnkType = lnk.GetType();
+        lnkType.InvokeMember("TargetPath",
+            System.Reflection.BindingFlags.SetProperty, null, lnk, new object[] { targetPath });
+        lnkType.InvokeMember("WorkingDirectory",
+            System.Reflection.BindingFlags.SetProperty, null, lnk, new object[] { workDir });
+        lnkType.InvokeMember("IconLocation",
+            System.Reflection.BindingFlags.SetProperty, null, lnk, new object[] { targetPath + ",0" });
+        lnkType.InvokeMember("Save",
+            System.Reflection.BindingFlags.InvokeMethod, null, lnk, null);
+    }
+
+    private static void TryDelete(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+        catch
+        {
+        }
+    }
+
+    private static void WriteInstallLog(string message)
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(LogPath));
+            File.AppendAllText(LogPath,
+                DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " [installer] " + message + Environment.NewLine,
+                Encoding.UTF8);
+        }
+        catch
+        {
         }
     }
 }
@@ -254,15 +550,21 @@ internal sealed class MainForm : Form
     private readonly WebView2 webView;
     private readonly Process ownedServer;
     private readonly bool killServerOnClose;
+    private readonly bool closeToTray;
     private readonly string webUrl;
     private bool serverReady;
+    private bool updateCheckQueued;
+    private bool reallyExit;
+    private NotifyIcon trayIcon;
+    private bool trayBalloonShown;
 
-    public MainForm(Process ownedServer, string webUrl, bool serverReady, bool killServerOnClose)
+    public MainForm(Process ownedServer, string webUrl, bool serverReady, bool killServerOnClose, bool closeToTray)
     {
         this.ownedServer = ownedServer;
         this.webUrl = webUrl;
         this.serverReady = serverReady;
         this.killServerOnClose = killServerOnClose;
+        this.closeToTray = closeToTray;
 
         Text = ProgramTitle;
         MinimumSize = new Size(800, 560);
@@ -278,11 +580,90 @@ internal sealed class MainForm : Form
         webView.Dock = DockStyle.Fill;
         Controls.Add(webView);
 
+        if (closeToTray)
+            SetupTray();
+
         Load += OnLoad;
         FormClosed += OnFormClosed;
     }
 
     private const string ProgramTitle = "DeepSeek Harness";
+
+    private void SetupTray()
+    {
+        try
+        {
+            trayIcon = new NotifyIcon();
+            trayIcon.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+            trayIcon.Text = ProgramTitle;
+            ContextMenuStrip menu = new ContextMenuStrip();
+            menu.Items.Add("显示主窗口", null, delegate { ShowFromTray(); });
+            menu.Items.Add(new ToolStripSeparator());
+            menu.Items.Add("退出", null, delegate
+            {
+                reallyExit = true;
+                Close();
+            });
+            trayIcon.ContextMenuStrip = menu;
+            trayIcon.DoubleClick += delegate { ShowFromTray(); };
+            trayIcon.Visible = true;
+            Program.Log("tray icon created");
+        }
+        catch (Exception error)
+        {
+            Program.Log("tray setup failed: " + error.Message);
+        }
+    }
+
+    private void ShowFromTray()
+    {
+        Show();
+        if (WindowState == FormWindowState.Minimized)
+            WindowState = FormWindowState.Normal;
+        Activate();
+    }
+
+    protected override void WndProc(ref Message m)
+    {
+        const int WM_CLOSE = 0x0010;
+        // WebView2 intercepts WM_CLOSE and re-raises FormClosing with a
+        // non-UserClosing reason, so handle the X button here directly.
+        if (m.Msg == WM_CLOSE && closeToTray && !reallyExit)
+        {
+            HideToTray();
+            return;
+        }
+        base.WndProc(ref m);
+    }
+
+    private void HideToTray()
+    {
+        Hide();
+        Program.Log("canceled close, hidden to tray");
+        if (!trayBalloonShown && trayIcon != null)
+        {
+            trayBalloonShown = true;
+            try
+            {
+                trayIcon.ShowBalloonTip(2000, ProgramTitle, "已最小化到托盘，双击托盘图标可重新打开。", ToolTipIcon.Info);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    protected override void OnFormClosing(FormClosingEventArgs e)
+    {
+        Program.Log("form closing: reason=" + e.CloseReason + ", closeToTray=" + closeToTray + ", reallyExit=" + reallyExit);
+        if (closeToTray && !reallyExit && e.CloseReason != CloseReason.WindowsShutDown)
+        {
+            e.Cancel = true;
+            HideToTray();
+            return;
+        }
+        base.OnFormClosing(e);
+    }
 
     private async void OnLoad(object sender, EventArgs e)
     {
@@ -299,6 +680,7 @@ internal sealed class MainForm : Form
             webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = true;
             webView.CoreWebView2.NewWindowRequested += OnNewWindowRequested;
             webView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
+            webView.CoreWebView2.NavigationCompleted += OnNavigationCompleted;
             webView.CoreWebView2.DocumentTitleChanged += delegate
             {
                 string title = webView.CoreWebView2.DocumentTitle;
@@ -321,6 +703,59 @@ internal sealed class MainForm : Form
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
             Close();
+        }
+    }
+
+    private void OnNavigationCompleted(object sender, CoreWebView2NavigationCompletedEventArgs e)
+    {
+        if (!e.IsSuccess || updateCheckQueued || !serverReady)
+            return;
+        updateCheckQueued = true;
+        Program.Log("navigation completed, queueing update check");
+        ThreadPool.QueueUserWorkItem(delegate
+        {
+            Program.UpdateInfo info = Program.CheckForUpdates();
+            if (info != null)
+            {
+                Program.Log("update available: " + info.LatestVersion);
+                try
+                {
+                    BeginInvoke((Action)delegate { ShowUpdateBanner(info); });
+                }
+                catch
+                {
+                }
+            }
+            else
+            {
+                Program.Log("update check: up to date");
+            }
+        });
+    }
+
+    private void ShowUpdateBanner(Program.UpdateInfo info)
+    {
+        try
+        {
+            string version = (info.LatestVersion ?? "").Replace("'", "").Replace("\"", "");
+            string url = (info.ReleaseUrl ?? "").Replace("'", "").Replace("\"", "");
+            string js =
+                "(function(){" +
+                "if(document.getElementById('dshw-update-banner'))return;" +
+                "var b=document.createElement('div');b.id='dshw-update-banner';" +
+                "b.style.cssText='position:fixed;bottom:16px;right:16px;z-index:99999;background:#2f6fed;color:#fff;" +
+                "padding:10px 16px;border-radius:8px;font:13px system-ui;box-shadow:0 2px 10px rgba(0,0,0,.25);" +
+                "display:flex;gap:12px;align-items:center';" +
+                "b.innerHTML=\"<span>有新版本 " + version + "</span>" +
+                "<a href='" + url + "' target='_blank' style='color:#fff;font-weight:600'>查看</a>" +
+                "<a href='#' onclick=\\\"this.parentNode.remove();return false\\\" style='color:rgba(255,255,255,.75)'>✕</a>\";" +
+                "document.body.appendChild(b);" +
+                "})();";
+            webView.CoreWebView2.ExecuteScriptAsync(js);
+        }
+        catch (Exception error)
+        {
+            Program.Log("update banner failed: " + error.Message);
         }
     }
 
@@ -458,7 +893,19 @@ internal sealed class MainForm : Form
 
     private void OnFormClosed(object sender, FormClosedEventArgs e)
     {
+        Program.Log("form closed, disposing tray and owned server");
         SaveWindowState();
+        if (trayIcon != null)
+        {
+            try
+            {
+                trayIcon.Visible = false;
+                trayIcon.Dispose();
+            }
+            catch
+            {
+            }
+        }
         if (killServerOnClose && ownedServer != null)
         {
             try

@@ -1,5 +1,5 @@
 param(
-    [string]$Version = "1.1.0",
+    [string]$Version = "1.2.0",
     [string]$IconPath = "",
     [string]$WebView2Version = "1.0.4129.50",
     [string]$ExeName = "DeepSeek Harness Window.exe",
