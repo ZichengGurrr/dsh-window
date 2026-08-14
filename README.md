@@ -1,14 +1,48 @@
 # DeepSeek Harness Window（社区版）
 
-把 [DeepSeek Harness](https://github.com/deepseek-ai/DeepSeek-Harness) 的 Web UI 装进 **Windows 原生独立窗口**（WebView2，即 Edge 内核）的极简启动器。
+把 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的 Web UI 装进 **Windows 原生独立窗口**（WebView2，即 Edge 内核）的极简启动器。
+
+<p align="center">
+  <a href="https://github.com/ZichengGurrr/dsh-window"><img alt="GitHub stars" src="https://img.shields.io/github/stars/ZichengGurrr/dsh-window?style=flat-square&color=4b6fff"></a>
+  <a href="https://www.npmjs.com/package/dsh-window"><img alt="npm" src="https://img.shields.io/npm/v/dsh-window?style=flat-square&color=cb3837"></a>
+  <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-263146?style=flat-square"></a>
+  <a href="https://awesome-dsh-plugin.com"><img alt="Awesome DSH Plugin" src="https://awesome-dsh-plugin.com/badge.svg"></a>
+  <img alt="platform" src="https://img.shields.io/badge/Windows%2010%2F11-4493F8?style=flat-square">
+</p>
+
+<p align="center"><strong>简体中文</strong> | <a href="#english">English</a></p>
 
 - 没有浏览器标签栏、地址栏；任务栏上是自己的图标和窗口
-- 不需要 Electron；精简版整个应用约 1MB
+- 不需要 Electron；精简版整个应用约 256KB（4 个文件）
 - **便携版双击即用**：自带 Node.js + DSH + Git，无需安装任何环境
 - 双击即用：自动检测/启动本地 DSH 服务，就绪后弹窗；关窗即停（服务由它启动时）
 - 单实例：重复双击只聚焦已有窗口；记住窗口大小和位置；连不上服务时窗口内一键重试
 
 > ⚠️ **非官方社区项目**，与 DeepSeek 公司无隶属关系。"DeepSeek" 商标归其所有者所有。
+
+## 快速开始
+
+**方式一：DSH 插件（推荐给 DSH 用户）**
+
+```sh
+dsh plugin --profile web add dsh-window
+```
+
+插件自动从 GitHub Releases 安装应用并创建桌面快捷方式「DeepSeek Harness Window」；对话里说"打开桌面应用"即可通过 `desktop_launch` 工具拉起。详见 [plugin/README.md](plugin/README.md)。
+
+**方式二：便携版（零门槛，任何人）**
+
+1. 从 [Releases](../../releases) 下载 `DeepSeek-Harness-Window-portable-v*-win-x64.zip`
+2. 解压到任意目录
+3. 双击 `DeepSeek Harness Window.exe`
+
+> 首次运行 Windows SmartScreen 可能拦截（exe 未签名）：点「更多信息 → 仍要运行」即可。
+
+**方式三：精简版（已有 Node 环境）**
+
+1. 下载 `DeepSeek-Harness-Window-v*-win-x64.zip` 并解压（4 个文件）
+2. 前提：Windows 10/11、Node.js 装在默认位置 `%LOCALAPPDATA%\Programs\nodejs`、`npm install -g @deepseek-ai/dsh`
+3. 双击 `DeepSeek Harness Window.exe`
 
 ## 两种形态
 
@@ -19,21 +53,19 @@
 | 前提 | 已装 Node + `npm i -g @deepseek-ai/dsh` | 无 |
 | 文件名 | `DeepSeek-Harness-Window-v*-win-x64.zip` | `...-portable-v*-win-x64.zip` |
 
+## 同类桌面壳对比
+
+| | **dsh-window** | [dsh-desktop-windowos](https://github.com/RAFOLIE/dsh-desktop-windowos) | [DeepSeek Harness Desktop](https://github.com/anywhere-labs/deepseek-harness-desktop) |
+| --- | --- | --- | --- |
+| 安装 | `dsh plugin add dsh-window` / zip | 插件 / 单 exe | 官网安装包 |
+| 体积 | 256KB（精简）/ 180MB（便携） | 约 4.5MB | 安装包 |
+| 需要 Node | 精简版需要；**便携版不需要** | 需要 | 不需要 |
+| 技术栈 | C# + WebView2（系统自带 csc 即可编译） | Tauri v2 + React | Electron |
+| 托盘 / 任务完成通知 | 计划中 | 有 | 有 |
+
 ## 原理
 
 DeepSeek Harness 的图形界面本质是一个本地网页（默认 `http://127.0.0.1:3080`）。本程序负责起服务（`dsh --profile web --host 127.0.0.1 --port 3080`），并把"打开浏览器标签页"这一步换成内嵌的 WebView2 窗口。便携版把运行环境（Node、DSH 包、Git）放在程序目录的 `runtime\` 下，优先使用，找不到再回退到系统安装。
-
-## 使用（便携版，零门槛）
-
-1. 从 [Releases](../../releases) 下载 `DeepSeek-Harness-Window-portable-v*-win-x64.zip`
-2. 解压到任意目录
-3. 双击 `DeepSeek Harness Window.exe`
-
-## 使用（精简版）
-
-1. 下载 `DeepSeek-Harness-Window-v*-win-x64.zip` 并解压（4 个文件）
-2. 前提：Windows 10/11、Node.js 装在默认位置 `%LOCALAPPDATA%\Programs\nodejs`、`npm install -g @deepseek-ai/dsh`
-3. 双击 `DeepSeek Harness Window.exe`
 
 ## 可选配置
 
@@ -93,18 +125,157 @@ Node.js 运行时 + 完整 `@deepseek-ai/dsh` 包 + MinGit。这是"解压即用
 **为什么不是单文件 exe？**
 WebView2 需要 3 个运行库文件随 exe 分发（含一个原生 DLL）。4 个文件放一个文件夹，体感与单文件无异。
 
+**Windows 弹 SmartScreen 警告？**
+exe 未做代码签名，首次运行会被拦：点「更多信息 → 仍要运行」。签名在 Roadmap 中。
+
 ## Roadmap
 
-- [ ] 一键安装器（Inno Setup / winget 包）
-- [ ] 自动检查新版本并提示更新
+- [x] 作为 DSH 插件分发（`dsh plugin add dsh-window`，含 `desktop_launch` 工具与自动安装/升级）
 - [ ] 托盘常驻与最小化到托盘
+- [ ] 任务完成系统通知（会话 idle 时弹 Toast，可一键唤回窗口）
+- [ ] 一键安装器（Inno Setup / winget 包）
+- [ ] 代码签名（消除 SmartScreen 警告）
 
 ## 相关链接
 
-- 官方仓库：[deepseek-ai/DeepSeek-Harness](https://github.com/deepseek-ai/DeepSeek-Harness)（MIT，Discussions 开放）
+- 官方仓库：[deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)（MIT，Discussions 开放）
 - 官方 npm 包：[`@deepseek-ai/dsh`](https://www.npmjs.com/package/@deepseek-ai/dsh)
-- 其他社区桌面壳（Electron 路线）：[salathleizhang/deepseek-harness-desktop](https://github.com/salathleizhang/deepseek-harness-desktop)、[ChisaAlter/Deepseek-Harness-Desktop](https://github.com/ChisaAlter/Deepseek-Harness-Desktop)
+- 插件精选列表：[awesome-dsh-plugin](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin)
+- 其他社区桌面壳：[RAFOLIE/dsh-desktop-windowos](https://github.com/RAFOLIE/dsh-desktop-windowos)、[anywhere-labs/deepseek-harness-desktop](https://github.com/anywhere-labs/deepseek-harness-desktop)、[salathleizhang/deepseek-harness-desktop](https://github.com/salathleizhang/deepseek-harness-desktop)、[ChisaAlter/Deepseek-Harness-Desktop](https://github.com/ChisaAlter/Deepseek-Harness-Desktop)
 
 ## License
 
 MIT（见 [LICENSE](LICENSE)）
+
+---
+
+<a id="english"></a>
+
+# DeepSeek Harness Window (community edition)
+
+A minimal launcher that puts the [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) Web UI into a **native standalone Windows window** (WebView2 / Edge engine).
+
+- No browser tabs or address bar; its own taskbar icon and window
+- No Electron; the slim build is ~256KB (4 files)
+- **Portable build, double-click and go**: bundles Node.js + DSH + Git, no environment required
+- Auto-detects/starts the local DSH service and opens the window when ready; closes the service on exit only when it started it
+- Single instance: re-launching focuses the existing window; remembers size/position; one-click retry inside the window when the service is unreachable
+
+> ⚠️ **Community project**, not affiliated with DeepSeek. The "DeepSeek" trademark belongs to its owners.
+
+## Quick start
+
+**Option A: DSH plugin (recommended for DSH users)**
+
+```sh
+dsh plugin --profile web add dsh-window
+```
+
+The plugin auto-installs the app from GitHub Releases and creates the desktop shortcut "DeepSeek Harness Window"; say "open the desktop app" in chat to launch it via the `desktop_launch` tool. See [plugin/README.md](plugin/README.md).
+
+**Option B: portable build (anyone, zero prerequisites)**
+
+1. Download `DeepSeek-Harness-Window-portable-v*-win-x64.zip` from [Releases](../../releases)
+2. Unzip anywhere
+3. Double-click `DeepSeek Harness Window.exe`
+
+> First run may hit SmartScreen (the exe is unsigned): click "More info → Run anyway".
+
+**Option C: slim build (Node environment already present)**
+
+1. Download and unzip `DeepSeek-Harness-Window-v*-win-x64.zip` (4 files)
+2. Prerequisites: Windows 10/11, Node.js at `%LOCALAPPDATA%\Programs\nodejs`, `npm install -g @deepseek-ai/dsh`
+3. Double-click `DeepSeek Harness Window.exe`
+
+## Builds
+
+| | slim | portable |
+| --- | --- | --- |
+| Size | ~256KB | ~180MB |
+| For | developers with Node already set up | **anyone**, unzip and double-click |
+| Prerequisites | Node + `npm i -g @deepseek-ai/dsh` | none |
+| File | `DeepSeek-Harness-Window-v*-win-x64.zip` | `...-portable-v*-win-x64.zip` |
+
+## How it works
+
+The DeepSeek Harness GUI is a local web page (default `http://127.0.0.1:3080`). This app starts the service (`dsh --profile web --host 127.0.0.1 --port 3080`) and replaces the "open a browser tab" step with an embedded WebView2 window. The portable build keeps the runtime (Node, the DSH package, Git) under `runtime\` and falls back to the system install when missing.
+
+## Optional config
+
+Drop a `dsh-window.config.json` next to the exe (all keys optional):
+
+```json
+{
+  "host": "127.0.0.1",
+  "port": 3080,
+  "waitTimeoutMs": 30000,
+  "killServerOnClose": true,
+  "permissionMode": "danger-full-access"
+}
+```
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `host` / `port` | `127.0.0.1` / `3080` | Service address; change the port to coexist with other instances |
+| `waitTimeoutMs` | `30000` | Service readiness timeout |
+| `killServerOnClose` | `true` | Stop the service on window close when this app started it |
+| `permissionMode` | `danger-full-access` | DSH permission mode passed to the service (changeable in the Web UI) |
+
+## Command-line arguments
+
+| Argument | Effect |
+| --- | --- |
+| (none) | Ensure the service is online, then open the window |
+| `--check` | Only check the runtime environment, start nothing |
+| `--no-window` | Only ensure the service is online, open no window |
+
+## Building from source
+
+Prerequisites: Windows + PowerShell + .NET Framework 4.x (bundled `csc.exe`). The build script downloads the WebView2 SDK (NuGet) automatically.
+
+```powershell
+.\build.ps1                          # slim build
+.\build.ps1 -Portable                # slim + portable (downloads Node/MinGit, npm-installs DSH)
+.\build.ps1 -Version 1.1.0 -IconPath .\my-icon.ico
+.\build.ps1 -Portable -DshVersion 0.1.0-rc.6 -NpmRegistry https://registry.npmmirror.com
+```
+
+Output: `dist\` (slim), `dist-portable\` (portable), and zips in the repo root.
+
+> The icon is optional. This repo ships no DeepSeek logo assets; do not use the official whale logo in public distribution unless you are sure you have the rights.
+
+## FAQ
+
+**Why is the portable build so big?**
+Node.js runtime + the full `@deepseek-ai/dsh` package + MinGit. That is the price of unzip-and-go; use the slim build when you already have Node.
+
+**How is this different from opening a browser?**
+The service is identical and sessions are fully shared (`~/.dsh`). The difference is window chrome only: standalone window, own taskbar icon, close-to-stop.
+
+**Can I still use the browser after closing the window?**
+Yes, when the service was already running externally (e.g. `dsh web` in a terminal). When this app started the service and `killServerOnClose` is `true`, closing the window stops it.
+
+**Why not a single-file exe?**
+WebView2 needs 3 runtime files shipped beside the exe (including a native DLL). Four files in one folder feel the same as a single file.
+
+**Windows shows a SmartScreen warning?**
+The exe is not code-signed yet, so the first run is blocked: click "More info → Run anyway". Signing is on the roadmap.
+
+## Roadmap
+
+- [x] DSH plugin distribution (`dsh plugin add dsh-window`, `desktop_launch` tool, auto-install/upgrade)
+- [ ] Tray residency and minimize-to-tray
+- [ ] Task-done system notification (toast when the session goes idle, one click to restore the window)
+- [ ] One-click installer (Inno Setup / winget package)
+- [ ] Code signing (removes the SmartScreen warning)
+
+## Links
+
+- Official repo: [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness) (MIT, Discussions open)
+- Official npm package: [`@deepseek-ai/dsh`](https://www.npmjs.com/package/@deepseek-ai/dsh)
+- Curated plugin list: [awesome-dsh-plugin](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin)
+- Other community desktop shells: [RAFOLIE/dsh-desktop-windowos](https://github.com/RAFOLIE/dsh-desktop-windowos), [anywhere-labs/deepseek-harness-desktop](https://github.com/anywhere-labs/deepseek-harness-desktop), [salathleizhang/deepseek-harness-desktop](https://github.com/salathleizhang/deepseek-harness-desktop), [ChisaAlter/Deepseek-Harness-Desktop](https://github.com/ChisaAlter/Deepseek-Harness-Desktop)
+
+## License
+
+MIT (see [LICENSE](LICENSE))
