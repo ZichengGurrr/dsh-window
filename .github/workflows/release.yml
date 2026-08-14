@@ -1,0 +1,28 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build slim zip
+        shell: pwsh
+        run: |
+          $ver = "$env:GITHUB_REF_NAME".TrimStart('v')
+          if (-not $ver) { $ver = '0.0.0' }
+          .\build.ps1 -Version $ver
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: DeepSeek-Harness-Window-v*-win-x64.zip
+          generate_release_notes: true
