@@ -137,10 +137,17 @@ if ($Portable) {
     # Install @deepseek-ai/dsh into the portable runtime.
     Write-Host "installing @deepseek-ai/dsh@$DshVersion into portable runtime (this downloads packages) ..."
     $npm = Join-Path $nodeDir "npm.cmd"
+    # npm writes warnings to stderr; with ErrorActionPreference=Stop that
+    # would abort the build even when npm exits 0. Relax it around native
+    # calls and rely on $LASTEXITCODE instead.
+    $previousEap = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
     & $npm install --prefix (Join-Path $PortableDir "runtime") "@deepseek-ai/dsh@$DshVersion" `
         --no-audit --no-fund --registry $NpmRegistry
-    if ($LASTEXITCODE -ne 0) {
-        throw "npm install failed with exit code $LASTEXITCODE"
+    $npmExit = $LASTEXITCODE
+    $ErrorActionPreference = $previousEap
+    if ($npmExit -ne 0) {
+        throw "npm install failed with exit code $npmExit"
     }
     if (-not (Test-Path (Join-Path $PortableDir "runtime\node_modules\@deepseek-ai\dsh\lib\bin.js"))) {
         throw "dsh entry not found after npm install"
