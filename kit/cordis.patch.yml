@@ -1,13 +1,13 @@
 # dsh-window-kit bundle patch：一次挂载三件套。
-# 1) dsh-window           —— Windows 原生窗口（WebView2），自动从 Releases 安装 exe + 桌面快捷方式 + desktop_launch 工具
+# 1) dsh-window-kit       —— Windows 原生窗口（WebView2）：自动从 Releases 安装 exe + 桌面快捷方式 + desktop_launch 工具
 # 2) deepeye-vision       —— DeepEye 视觉（智谱 GLM-4V-Flash），为纯文本模型外挂看图能力
 # 3) voice                —— 语音输入（输入框麦克风按钮 + Ctrl+Space，浏览器 Web Speech 开箱即用，可选本地 sherpa-onnx 原生识别）
 #
 # GLM 视觉默认走智谱开放平台（open.bigmodel.cn），API Key 取自 ~/.dsh/.env 的 DEEPEYE_API_KEY。
 # 想换模型/接口：在 profile 的 cordis.patch.yml 里覆盖 deepeye-vision 的 config（见 README）。
 - insert:
-    - id: dsh-window
-      name: dsh-window
+    - id: dsh-window-kit
+      name: dsh-window-kit
     - id: deepeye-vision
       name: dsh-plugin-deepeye
       config:

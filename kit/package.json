@@ -1,17 +1,48 @@
 {
   "name": "dsh-window-kit",
-  "description": "DeepSeek Harness 三件套全家桶：Windows 原生桌面窗口（dsh-window）+ GLM 视觉（DeepEye）+ 语音输入（麦克风按钮）。一条命令装齐。",
+  "description": "DeepSeek Harness 三件套全家桶：Windows 原生桌面窗口 + GLM 视觉（DeepEye）+ 语音输入（麦克风按钮）。一条命令装齐。",
   "version": "0.1.0",
   "license": "MIT",
   "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
   "files": [
+    "lib",
+    "src",
     "cordis.patch.yml",
     "README.md"
   ],
+  "engines": {
+    "node": "^22.19 || >=24"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.test.json && node --test \"lib-test/tests/*.test.js\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
   "dependencies": {
     "dsh-plugin-deepeye": "^0.1.1",
-    "@nn12138/dsh-voice": "^0.2.2",
-    "dsh-window": "github:ZichengGurrr/dsh-window#path:/plugin"
+    "@nn12138/dsh-voice": "^0.2.2"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1-rc.1",
+    "@deepseek-ai/dsh-tools": "*",
+    "@deepseek-ai/schemastery": "^3.18.1"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-tools": "0.1.0-rc.6",
+    "@deepseek-ai/schemastery": "^3.18.1",
+    "@types/node": "^22.20.0",
+    "typescript": "^6.0.3"
   },
   "repository": {
     "type": "git",

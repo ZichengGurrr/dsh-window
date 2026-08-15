@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "lib-test",
+    "declaration": true,
+    "declarationDir": "lib-test/types"
+  },
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
+}
