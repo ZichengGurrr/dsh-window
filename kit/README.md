@@ -4,7 +4,7 @@ DeepSeek Harness 一条命令装齐三件事：
 
 | 组件 | 作用 | 来源 |
 | --- | --- | --- |
-| **桌面** `dsh-window` | Windows 原生独立窗口（WebView2），自动安装 exe、创建快捷方式、注册 `desktop_launch` 工具 | 本仓库 [plugin/](../plugin) |
+| **桌面** `dsh-window` | Windows 原生独立窗口（WebView2）：自动从 GitHub Releases 安装 exe、创建快捷方式、注册 `desktop_launch` 工具 | 本套件内置（[src/](src/)，与 [../plugin](../plugin) 同源） |
 | **眼睛** `dsh-plugin-deepeye` | 视觉插件：为纯文本模型外挂看图能力（vision_describe / vision_ocr / vision_ask / vision_layout / vision_clipboard），默认智谱 **GLM-4V-Flash** | [Favio8/dsh-plugin-deepeye](https://github.com/Favio8/dsh-plugin-deepeye) |
 | **嘴巴** `@nn12138/dsh-voice` | 语音输入：输入框麦克风按钮（或 Ctrl+Space）说话 → 文本进输入框，纯输入、与 agent preset 解耦 | [3274375092/dsh-voice](https://github.com/3274375092/dsh-voice) |
 
@@ -58,7 +58,9 @@ dsh-voice-models        # 下载模型 ~100MB
 
 ### 3. 桌面窗口（自动）
 
-插件激活时自动从 GitHub Releases 安装应用并创建桌面快捷方式「DeepSeek Harness Window」，版本更新会自动升级；对话里说"打开桌面应用"即可拉起。详见 [plugin/README.md](../plugin/README.md)。
+插件激活时自动从 GitHub Releases 安装应用并创建桌面快捷方式「DeepSeek Harness Window」，版本更新会自动升级；对话里说"打开桌面应用"即可拉起。
+
+> 本套件已内置桌面安装器，无需再单独安装 [dsh-window 插件](../plugin)（重复安装会冲突，若已装请先 `dsh plugin --profile web remove dsh-window`）。
 
 ## 卸载
 
