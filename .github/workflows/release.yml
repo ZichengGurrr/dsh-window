@@ -14,7 +14,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check existing release
+        id: check
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if (gh release view "$env:GITHUB_REF_NAME" --repo "$env:GITHUB_REPOSITORY" 2>$null) {
+            "exists=true" | Out-File -Append -Encoding utf8 $env:GITHUB_OUTPUT
+            Write-Host "release already exists, skipping"
+          } else {
+            "exists=false" | Out-File -Append -Encoding utf8 $env:GITHUB_OUTPUT
+          }
+
       - name: Build slim zip
+        if: steps.check.outputs.exists != 'true'
         shell: pwsh
         run: |
           $ver = "$env:GITHUB_REF_NAME".TrimStart('v')
@@ -22,6 +36,7 @@ jobs:
           .\build.ps1 -Version $ver
 
       - name: Upload release assets
+        if: steps.check.outputs.exists != 'true'
         uses: softprops/action-gh-release@v2
         with:
           files: DeepSeek-Harness-Window-v*-win-x64.zip

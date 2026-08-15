@@ -12,10 +12,6 @@
 
 <p align="center"><strong>简体中文</strong> | <a href="#english">English</a></p>
 
-<p align="center">
-  <img src="assets/screenshot.png" alt="DeepSeek Harness Window 界面预览" width="640">
-</p>
-
 - 没有浏览器标签栏、地址栏；任务栏上是自己的图标和窗口
 - 不需要 Electron；精简版整个应用约 256KB（4 个文件）
 - **便携版双击即用**：自带 Node.js + DSH + Git，无需安装任何环境
@@ -171,10 +167,6 @@ MIT（见 [LICENSE](LICENSE)）
 # DeepSeek Harness Window (community edition)
 
 A minimal launcher that puts the [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) Web UI into a **native standalone Windows window** (WebView2 / Edge engine).
-
-<p align="center">
-  <img src="assets/screenshot.png" alt="DeepSeek Harness Window preview" width="640">
-</p>
 
 - No browser tabs or address bar; its own taskbar icon and window
 - No Electron; the slim build is ~256KB (4 files)
