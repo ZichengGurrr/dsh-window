@@ -1,0 +1,39 @@
+{
+  "name": "dsh-window-kit",
+  "description": "DeepSeek Harness 三件套全家桶：Windows 原生桌面窗口（dsh-window）+ GLM 视觉（DeepEye）+ 语音输入（麦克风按钮）。一条命令装齐。",
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "files": [
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dependencies": {
+    "dsh-plugin-deepeye": "^0.1.1",
+    "@nn12138/dsh-voice": "^0.2.2",
+    "dsh-window": "github:ZichengGurrr/dsh-window#path:/plugin"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ZichengGurrr/dsh-window.git",
+    "directory": "kit"
+  },
+  "homepage": "https://github.com/ZichengGurrr/dsh-window/tree/main/kit",
+  "keywords": [
+    "deepseek",
+    "harness",
+    "dsh",
+    "dsh-plugin",
+    "desktop",
+    "windows",
+    "vision",
+    "glm",
+    "voice",
+    "speech"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

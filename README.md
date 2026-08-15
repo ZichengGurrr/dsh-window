@@ -49,6 +49,16 @@ dsh plugin --profile web add dsh-window
 3. 双击 `DeepSeek Harness Window.exe`
 4. 想一键安装到系统（开始菜单 + 桌面快捷方式 + 控制面板可卸载）：运行 `DeepSeek Harness Window.exe --install`，卸载用 `--uninstall`
 
+## 三件套全家桶（桌面 + GLM 视觉 + 语音输入）
+
+一条命令装齐「Windows 桌面窗口 + DeepEye 视觉（GLM-4V-Flash）+ 语音输入按钮」：
+
+```sh
+dsh plugin --profile web add github:ZichengGurrr/dsh-window#path:/kit
+```
+
+GLM 视觉需在 `~/.dsh/.env` 配置 `DEEPEYE_API_KEY`（智谱开放平台）。详见 [kit/README.md](kit/README.md)。
+
 ## 两种形态
 
 | | 精简版 slim | 便携版 portable |
@@ -208,6 +218,16 @@ The plugin auto-installs the app from GitHub Releases and creates the desktop sh
 2. Prerequisites: Windows 10/11, Node.js at `%LOCALAPPDATA%\Programs\nodejs`, `npm install -g @deepseek-ai/dsh`
 3. Double-click `DeepSeek Harness Window.exe`
 4. To install system-wide (start menu + desktop shortcut + control-panel uninstaller): run `DeepSeek Harness Window.exe --install`; remove with `--uninstall`
+
+## All-in-one kit (desktop + GLM vision + voice input)
+
+One command installs the Windows desktop window, DeepEye vision (GLM-4V-Flash), and the voice-input mic button:
+
+```sh
+dsh plugin --profile web add github:ZichengGurrr/dsh-window#path:/kit
+```
+
+Set `DEEPEYE_API_KEY` in `~/.dsh/.env` (Zhipu open platform) for vision. See [kit/README.md](kit/README.md).
 
 ## Builds
 
