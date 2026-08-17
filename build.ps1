@@ -81,6 +81,9 @@ $refs = @(
 )
 $cscArgs = @("/nologo", "/target:winexe", "/platform:x64", "/optimize+")
 if ($IconPath) { $cscArgs += ("/win32icon:" + $IconPath) }
+# Embed the application manifest (PerMonitorV2 DPI awareness + comctl32 v6).
+$manifestPath = Join-Path $Root "app.manifest"
+if (Test-Path $manifestPath) { $cscArgs += ("/win32manifest:" + $manifestPath) }
 $cscArgs += ("/out:" + (Join-Path $DistDir $ExeName))
 foreach ($ref in $refs) { $cscArgs += $ref }
 $cscArgs += $SrcFile

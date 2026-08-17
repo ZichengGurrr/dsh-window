@@ -18,8 +18,8 @@ using Microsoft.Web.WebView2.WinForms;
 [assembly: AssemblyDescription("DeepSeek Harness standalone window (WebView2)")]
 [assembly: AssemblyCompany("Community project, not affiliated with DeepSeek")]
 [assembly: AssemblyProduct("DeepSeek Harness Window")]
-[assembly: AssemblyVersion("1.2.0.0")]
-[assembly: AssemblyFileVersion("1.2.0.0")]
+[assembly: AssemblyVersion("1.2.1.0")]
+[assembly: AssemblyFileVersion("1.2.1.0")]
 
 internal static class Program
 {
@@ -49,6 +49,9 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        // High-DPI: the embedded manifest (PerMonitorV2) is the primary
+        // mechanism; this runtime fallback covers builds without a manifest.
+        EnableHighDpi();
         // GitHub API requires TLS 1.2+; the .NET Framework default is lower.
         ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
         try
@@ -119,6 +122,52 @@ internal static class Program
         }
         catch
         {
+        }
+    }
+
+    // ---- High-DPI awareness ----
+    // The embedded app.manifest declares PerMonitorV2; when a manifest is
+    // present these calls fail with E_ACCESSDENIED and we keep the manifest
+    // value. Without a manifest they promote the process so the window is
+    // not bitmap-stretched on scaled displays (issue #1).
+
+    private static readonly IntPtr DpiAwarenessContextPerMonitorV2 = new IntPtr(-4);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool SetProcessDpiAwarenessContext(IntPtr value);
+
+    [DllImport("shcore.dll")]
+    private static extern int SetProcessDpiAwareness(int value);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetProcessDPIAware();
+
+    private static void EnableHighDpi()
+    {
+        try
+        {
+            if (!SetProcessDpiAwarenessContext(DpiAwarenessContextPerMonitorV2))
+            {
+                try
+                {
+                    SetProcessDpiAwareness(2); // PROCESS_PER_MONITOR_DPI_AWARE
+                }
+                catch
+                {
+                    SetProcessDPIAware();
+                }
+            }
+        }
+        catch
+        {
+            try
+            {
+                SetProcessDPIAware();
+            }
+            catch
+            {
+                // Nothing left to try; the window will be virtualized.
+            }
         }
     }
 
@@ -838,6 +887,23 @@ internal sealed class MainForm : Form
             int h = state.ContainsKey("h") ? Convert.ToInt32(state["h"]) : 0;
             bool maximized = state.ContainsKey("maximized") && Convert.ToBoolean(state["maximized"]);
 
+            // Migration: v1.x saved 96-DPI virtualized pixels (process was
+            // DPI-unaware); since 1.2.1 the process is per-monitor aware and
+            // works in physical pixels. Scale old values by the system DPI
+            // ratio once, then persist ver=2 on the next save.
+            bool legacy = !state.ContainsKey("ver") || Convert.ToInt32(state["ver"]) < 2;
+            if (legacy)
+            {
+                float scale = GetSystemDpiScale();
+                if (scale > 1f)
+                {
+                    x = (int)Math.Round(x * scale);
+                    y = (int)Math.Round(y * scale);
+                    w = (int)Math.Round(w * scale);
+                    h = (int)Math.Round(h * scale);
+                }
+            }
+
             bool onScreen = false;
             if (w >= MinimumSize.Width && h >= MinimumSize.Height)
             {
@@ -871,6 +937,24 @@ internal sealed class MainForm : Form
         }
     }
 
+    /// <summary>System DPI ratio (primary monitor DPI / 96) for one-time
+    /// migration of pre-1.2.1 window state.</summary>
+    private static float GetSystemDpiScale()
+    {
+        try
+        {
+            using (Graphics graphics = Graphics.FromHwnd(IntPtr.Zero))
+            {
+                if (graphics.DpiX > 0)
+                    return graphics.DpiX / 96f;
+            }
+        }
+        catch
+        {
+        }
+        return 1f;
+    }
+
     private void SaveWindowState()
     {
         try
@@ -883,6 +967,7 @@ internal sealed class MainForm : Form
             state["w"] = bounds.Width;
             state["h"] = bounds.Height;
             state["maximized"] = WindowState == FormWindowState.Maximized;
+            state["ver"] = 2;
             JavaScriptSerializer serializer = new JavaScriptSerializer();
             File.WriteAllText(StatePath, serializer.Serialize(state), Encoding.UTF8);
         }
