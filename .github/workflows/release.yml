@@ -26,6 +26,8 @@ jobs:
           } else {
             "exists=false" | Out-File -Append -Encoding utf8 $env:GITHUB_OUTPUT
           }
+          # gh exits 1 for "release not found"; that is an expected outcome here.
+          exit 0
 
       - name: Build slim zip
         if: steps.check.outputs.exists != 'true'
