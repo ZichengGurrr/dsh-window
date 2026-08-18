@@ -1,5 +1,5 @@
 param(
-    [string]$Version = "1.2.0",
+    [string]$Version = "1.2.2",
     [string]$IconPath = "",
     [string]$WebView2Version = "1.0.4129.50",
     [string]$ExeName = "DeepSeek Harness Window.exe",
@@ -13,6 +13,11 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
+# Default icon: assets\icon.ico when present and no explicit icon was given.
+if (-not $IconPath) {
+    $defaultIcon = Join-Path $Root "assets\icon.ico"
+    if (Test-Path $defaultIcon) { $IconPath = $defaultIcon }
+}
 $BuildDir = Join-Path $Root ".build"
 $DistDir = Join-Path $Root "dist"
 $PortableDir = Join-Path $Root "dist-portable"
